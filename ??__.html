@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Scratch ??__ Username Checker</title>
+<style>
+  body {
+    background:#111;
+    color:#eee;
+    font-family:sans-serif;
+  }
+  h3 { margin-bottom:6px; }
+  .account {
+    padding:4px 8px;
+    margin:2px 0;
+    border-radius:4px;
+    font-size:12px;
+  }
+  .exists { background:#c62828; }     /* 赤：存在 */
+  .available { background:#2e7d32; }  /* 緑：未取得 */
+  .checking { background:#616161; }   /* 灰：取得中/不明 */
+</style>
+</head>
+<body>
+
+<h3>Scratch Username Status (??__)</h3>
+<div id="list"></div>
+
+<script>
+/* =====================================================
+   ① ??__ ユーザ名自動生成（aa__ ～ zz__）
+===================================================== */
+function generateNames() {
+  const chars = "abcdefghijklmnopqrstuvwxyz";
+  const result = [];
+  for (let a of chars) {
+    for (let b of chars) {
+      result.push(a + b + "__");
+    }
+  }
+  return result;
+}
+
+const accounts = generateNames(); // 676件
+
+/* =====================================================
+   ② Scratch 判定設定
+===================================================== */
+const PROXY = "https://corsproxy.io/?";
+
+function scratchUrl(name) {
+  return "https://scratch.mit.edu/users/" + name + "/";
+}
+
+const list = document.getElementById("list");
+
+/* =====================================================
+   ③ 判定処理
+===================================================== */
+async function checkAccount(name, el) {
+  try {
+    const res = await fetch(
+      PROXY + encodeURIComponent(scratchUrl(name)),
+      { method: "GET" }
+    );
+
+    if (res.status === 200) {
+      el.className = "account exists";
+    } else if (res.status === 404) {
+      el.className = "account available";
+    } else {
+      el.className = "account checking";
+    }
+  } catch {
+    el.className = "account checking";
+  }
+}
+
+/* =====================================================
+   ④ 実行（レート制限対策あり）
+===================================================== */
+(async () => {
+  for (const name of accounts) {
+    const div = document.createElement("div");
+    div.textContent = name;
+    div.className = "account checking";
+    list.appendChild(div);
+
+    checkAccount(name, div);
+
+    // Scratch対策：待機（重要）
+    await new Promise(r => setTimeout(r, 350));
+  }
+})();
+</script>
+
+</body>
+</html>
