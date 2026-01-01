@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Scratch _XXX Account Checker</title>
+<style>
+  body { background:#111; color:#eee; font-family:sans-serif; }
+  h3 { margin-bottom:6px; }
+  .account { padding:4px 8px; margin:2px 0; border-radius:4px; font-size:12px; }
+  .exists { background:#c62828; }    /* 赤：存在 */
+  .available { background:#2e7d32; } /* 緑：未取得 */
+  .checking { background:#616161; }  /* 灰：取得中 */
+</style>
+</head>
+<body>
+
+<h3>Scratch Username Status (_XXX)</h3>
+<div id="list"></div>
+
+<script>
+/* =====================================================
+   ① ISO 3166-1 alpha-3 国コード
+===================================================== */
+const countryCodes3 = [
+"AFG","ALA","ALB","DZA","ASM","AND","AGO","AIA","ATA","ATG","ARG","ARM","ABW","AUS","AUT","AZE",
+"BHS","BHR","BGD","BRB","BLR","BEL","BLZ","BEN","BMU","BTN","BOL","BES","BIH","BWA","BVT","BRA",
+"IOT","BRN","BGR","BFA","BDI","CPV","KHM","CMR","CAN","CYM","CAF","TCD","CHL","CHN","CXR","CCK",
+"COL","COM","COD","COG","COK","CRI","CIV","HRV","CUB","CUW","CYP","CZE","DNK","DJI","DMA","DOM",
+"ECU","EGY","SLV","GNQ","ERI","EST","SWZ","ETH","FLK","FRO","FJI","FIN","FRA","GUF","PYF","ATF",
+"GAB","GMB","GEO","DEU","GHA","GIB","GRC","GRL","GRD","GLP","GUM","GTM","GGY","GIN","GNB","GUY",
+"HTI","HMD","VAT","HND","HKG","HUN","ISL","IND","IDN","IRN","IRQ","IRL","IMN","ISR","ITA","JAM",
+"JPN","JEY","JOR","KAZ","KEN","KIR","PRK","KOR","KWT","KGZ","LAO","LVA","LBN","LSO","LBR","LBY",
+"LIE","LTU","LUX","MAC","MDG","MWI","MYS","MDV","MLI","MLT","MHL","MTQ","MRT","MUS","MYT","MEX",
+"FSM","MDA","MCO","MNG","MNE","MSR","MAR","MOZ","MMR","NAM","NRU","NPL","NLD","NCL","NZL","NIC",
+"NER","NGA","NIU","NFK","MKD","MNP","NOR","OMN","PAK","PLW","PSE","PAN","PNG","PRY","PER","PHL",
+"PCN","POL","PRT","PRI","QAT","REU","ROU","RUS","RWA","BLM","SHN","KNA","LCA","MAF","SPM","VCT",
+"WSM","SMR","STP","SAU","SEN","SRB","SYC","SLE","SGP","SXM","SVK","SVN","SLB","SOM","ZAF","SGS",
+"SSD","ESP","LKA","SDN","SUR","SJM","SWE","CHE","SYR","TWN","TJK","TZA","THA","TLS","TGO","TKL",
+"TON","TTO","TUN","TUR","TKM","TCA","TUV","UGA","UKR","ARE","GBR","USA","UMI","URY","UZB","VUT",
+"VEN","VNM","VGB","VIR","WLF","ESH","YEM","ZMB","ZWE"
+];
+
+/* =====================================================
+   ② _XXX アカウント名生成
+===================================================== */
+const accounts = countryCodes3.map(code => "_" + code);
+
+/* =====================================================
+   ③ Scratch 判定設定
+===================================================== */
+const PROXY = "https://corsproxy.io/?"; // 自前Proxy推奨
+const list = document.getElementById("list");
+
+function scratchUrl(name) {
+  return "https://scratch.mit.edu/users/" + name + "/";
+}
+
+/* =====================================================
+   ④ 判定処理
+===================================================== */
+async function checkAccount(name, el) {
+  try {
+    const res = await fetch(
+      PROXY + encodeURIComponent(scratchUrl(name)),
+      { method: "GET" }
+    );
+
+    if (res.status === 200) {
+      el.className = "account exists";
+    } else if (res.status === 404) {
+      el.className = "account available";
+    } else {
+      el.className = "account checking";
+    }
+  } catch {
+    el.className = "account checking";
+  }
+}
+
+/* =====================================================
+   ⑤ 実行（レート制限あり）
+===================================================== */
+(async () => {
+  for (const name of accounts) {
+    const div = document.createElement("div");
+    div.textContent = name;
+    div.className = "account checking";
+    list.appendChild(div);
+
+    checkAccount(name, div);
+
+    // Scratch制限回避
+    await new Promise(r => setTimeout(r, 350));
+  }
+})();
+</script>
+
+</body>
+</html>
