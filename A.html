@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <!-- markdown-it + 自作Flex変換ライブラリ -->
+  <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
+</head>
+<body>
+  <!-- Markdown入力GUI -->
+  <textarea id="markdownInput" rows="10" cols="50" placeholder="# 見出し
+**太字**
+*斜体*
+- リスト1
+- リスト2
+[リンク](https://example.com)">
+  </textarea><br>
+  
+  <!-- プレビュー -->
+  <div id="preview"></div><br>
+  
+  <!-- 送信ボタン -->
+  <button onclick="sendFlexMessage()">📤 リッチメッセージ送信</button>
+
+  <script>
+    let liff, mdParser;
+    
+    // LIFF初期化
+    async function initLiff() {
+      liff = await liff.init({ liffId: 'your-liff-id' });
+      mdParser = window.markdownit();
+    }
+    
+    // Markdown → Flex Message変換（自作簡易版）
+    function markdownToFlex(markdown) {
+      const tokens = mdParser.parse(markdown, {});
+      const contents = tokens.map(token => {
+        if (token.type === 'heading_open') return { type: 'text', text: '', weight: 'bold', size: 'lg' };
+        if (token.type === 'strong_open') return { weight: 'bold' };
+        if (token.type === 'em_open') return { style: 'italic' };
+        if (token.type === 'list_item_open') return { type: 'bullet', layout: 'vertical' };
+        if (token.type === 'link_open') return { type: 'button', action: { type: 'uri', uri: token.attrGet('href') } };
+        if (token.content) return { type: 'text', text: token.content };
+        return null;
+      }).filter(Boolean);
+      
+      return {
+        type: 'flex',
+        altText: 'Markdown変換メッセージ',
+        contents: {
+          type: 'bubble',
+          body: {
+            type: 'box',
+            layout: 'vertical',
+            contents: contents.slice(0, 10) // Flex制限対応
+          }
+        }
+      };
+    }
+    
+    // プレビュー更新
+    document.getElementById('markdownInput').addEventListener('input', function() {
+      const preview = document.getElementById('preview');
+      preview.innerHTML = mdParser.render(this.value);
+    });
+    
+    // 送信実行
+    async function sendFlexMessage() {
+      const input = document.getElementById('markdownInput').value;
+      if (!input.trim()) return alert('Markdownを入力してください');
+      
+      const flexMsg = markdownToFlex(input);
+      
+      try {
+        await liff.sendMessages([flexMsg]);
+        alert('✅ リッチメッセージ送信完了！');
+      } catch (err) {
+        console.error(err);
+        alert('❌ 送信エラー（スコープ確認を）');
+      }
+    }
+    
+    // ページロード時初期化
+    initLiff();
+  </script>
+</body>
+</html>
